@@ -1,17 +1,35 @@
-#!/bin/bash
+#!/bin/bash -ex
 
 # x86_64 or aarch64
-ARCH="x86_64"
-#ARCH="aarch64"
+ARCH="${ARCH:x86_64}"
 
 # Path to Xen project source code
-XEN_DIR_X86="/media/mpoirier/passport/work/stratos/xen/x86/xen"
-XEN_DIR_ARCH64="/media/mpoirier/passport/work/stratos/xen/arm64/xen"
-# Path to bindgen binary
-BINDGEN="/home/mpoirier/work/stratos/bindgen/target/debug/"
+if [[ -z "${XEN_DIR}" ]]; then
+  echo "Environment variable XEN_DIR must be set to an existing xen repository"
+  exit 1
+fi
 
-if [ "$ARCH" = "x86_64" ]; then
-	${BINDGEN}/bindgen wrapper_xen_x86_64.h -o src/xen_bindings_xen_x86_64.rs \
+# Path to bindgen binary
+BINDGEN="${BINDGEN:bindgen}"
+
+# for debug logs
+pwd
+
+if [[ "${ARCH}" = "x86_64" ]]; then
+  if [[ -z "${XEN_DIR_X86}" ]]; then
+    printf "Environment variable XEN_DIR_X86 not set, using fallback value XEN_DIR=%s\n" "${XEN_DIR}"
+    XEN_DIR_X86="${XEN_DIR}"
+  fi
+
+  for d in "/xen/include/" "/xen/include/public/" "/dist/install/usr/local/include/" "/dist/install/usr/local/include/xen/sys/"; do
+    echo  "${XEN_DIR_X86}""${d}"
+    if [[ ! -d "${XEN_DIR_X86}${d}" ]]; then
+      echo "${XEN_DIR_X86}${d}" does not exist. Verify that "${XEN_DIR_X86}" is correctly set.
+      exit 1
+    fi
+  done
+
+	"${BINDGEN}" wrapper_xen_x86_64.h -o src/xen_bindings_xen_x86_64.rs \
 	--ignore-functions \
 	--ignore-methods \
 	--no-layout-tests \
@@ -19,10 +37,13 @@ if [ "$ARCH" = "x86_64" ]; then
 	--ctypes-prefix=xen_bindings_x86_64_types \
 	-- \
 	-D__XEN_TOOLS__ \
-	-I${XEN_DIR_X86}/xen/include/ \
-	-I${XEN_DIR_X86}/xen/include/public/
+	-D__x86_64__ \
+	-I"${XEN_DIR_X86}"/xen/include/ \
+	-I"${XEN_DIR_X86}"/xen/include/public/
 
-	${BINDGEN}/bindgen wrapper_tools_x86_64.h -o src/xen_bindings_tools_x86_64.rs \
+  echo "Wrote x86_64 bindings to src/xen_bindings_xen_x86_64.rs"
+
+	"${BINDGEN}" wrapper_tools_x86_64.h -o src/xen_bindings_tools_x86_64.rs \
 	--ignore-functions \
 	--ignore-methods \
 	--no-layout-tests \
@@ -34,11 +55,26 @@ if [ "$ARCH" = "x86_64" ]; then
 	--allowlist-file=.*xenstore.h \
 	-- \
 	-D__XEN_TOOLS__ \
-	-I${XEN_DIR_X86}/dist/install/usr/local/include/ \
-	-I${XEN_DIR_X86}/dist/install/usr/local/include/xen/sys/
+	-I"${XEN_DIR_X86}"/dist/install/usr/local/include/ \
+	-I"${XEN_DIR_X86}"/dist/install/usr/local/include/xen/sys/
 
-elif [ "$ARCH" = "aarch64" ]; then
-	${BINDGEN}/bindgen wrapper_xen_aarch64.h -o src/xen_bindings_xen_aarch64.rs \
+  echo "Wrote x86_64 tool bindings to src/xen_bindings_tools_x86_64.rs"
+
+elif [[ "${ARCH}" = "aarch64" ]]; then
+  if [[ -z "${XEN_DIR_AARCH64}" ]]; then
+    printf "Environment variable XEN_DIR_AARCH64 not set, using fallback value XEN_DIR=%s\n" "${XEN_DIR}"
+    XEN_DIR_AARCH64="${XEN_DIR}"
+  fi
+
+  for d in "/xen/include/" "/xen/include/public/" "/dist/install/usr/local/include/" "/dist/install/usr/local/include/xen/sys/"; do
+    echo  "${XEN_DIR_AARCH64}""${d}"
+    if [[ ! -d "${XEN_DIR_AARCH64}${d}" ]]; then
+      echo "${XEN_DIR_AARCH64}${d}" does not exist. Verify that "${XEN_DIR_AARCH64}" is correctly set.
+      exit 1
+    fi
+  done
+
+	"${BINDGEN}" wrapper_xen_aarch64.h -o src/xen_bindings_xen_aarch64.rs \
 	--ignore-functions \
 	--ignore-methods \
 	--no-layout-tests \
@@ -50,10 +86,12 @@ elif [ "$ARCH" = "aarch64" ]; then
 	-D__aarch64__ \
 	-DCONFIG_ARM_64 \
 	-D__XEN_TOOLS__ \
-	-I${XEN_DIR_ARCH64}/xen/include/ \
-	-I${XEN_DIR_ARCH64}/xen/include/public/
-	
-	${BINDGEN}/bindgen wrapper_tools_aarch64.h -o src/xen_bindings_tools_aarch64.rs \
+	-I"${XEN_DIR_AARCH64}"/xen/include/ \
+	-I"${XEN_DIR_AARCH64}"/xen/include/public/
+
+  echo "Wrote aarch64 bindings to src/xen_bindings_xen_aarch64.rs"
+
+	"${BINDGEN}" wrapper_tools_aarch64.h -o src/xen_bindings_tools_aarch64.rs \
 	--ignore-functions \
 	--ignore-methods \
 	--no-layout-tests \
@@ -67,7 +105,8 @@ elif [ "$ARCH" = "aarch64" ]; then
 	-D__aarch64__ \
 	-DCONFIG_ARM_64 \
 	-D__XEN_TOOLS__ \
-	-I${XEN_DIR_AARCH64}/dist/install/usr/local/include/ \
-	-I${XEN_DIR_AARCH64}/dist/install/usr/local/include/xen/sys/
-fi
+	-I"${XEN_DIR_AARCH64}"/dist/install/usr/local/include/ \
+	-I"${XEN_DIR_AARCH64}"/dist/install/usr/local/include/xen/sys/
 
+  echo "Wrote aarch64 tool bindings to src/xen_bindings_tools_aarch64.rs"
+fi

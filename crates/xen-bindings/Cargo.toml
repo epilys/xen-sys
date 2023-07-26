@@ -8,3 +8,6 @@ readme = "README.md"
 edition = "2021"
 keywords = ["bindings"]
 license = "BSD-3-Clause OR Apache-2.0"
+
+[build-dependencies]
+autotools = "0.2"
