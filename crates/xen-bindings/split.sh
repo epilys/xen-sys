@@ -1,19 +1,27 @@
 #!/bin/bash -ex
 
 # x86_64 or aarch64
-ARCH="${ARCH:x86_64}"
+if [[ -z "${ARCH}" ]]; then
+  ARCH="x86_64"
+fi
+
+# Path to bindgen binary
+if [[ -z "${BINDGEN}" ]]; then
+  BINDGEN="bindgen"
+fi
+
+# for debug logs
+pwd
+
+printf "ARCH    = '%s'\n" "${ARCH}"
+printf "BINDGEN = '%s'\n" "${BINDGEN}"
+printf "XEN_DIR = '%s'\n" "${XEN_DIR}"
 
 # Path to Xen project source code
 if [[ -z "${XEN_DIR}" ]]; then
   echo "Environment variable XEN_DIR must be set to an existing xen repository"
   exit 1
 fi
-
-# Path to bindgen binary
-BINDGEN="${BINDGEN:bindgen}"
-
-# for debug logs
-pwd
 
 if [[ "${ARCH}" = "x86_64" ]]; then
   if [[ -z "${XEN_DIR_X86}" ]]; then
@@ -109,4 +117,7 @@ elif [[ "${ARCH}" = "aarch64" ]]; then
 	-I"${XEN_DIR_AARCH64}"/dist/install/usr/local/include/xen/sys/
 
   echo "Wrote aarch64 tool bindings to src/xen_bindings_tools_aarch64.rs"
+else
+  printf "Generated no bindings. Given ARCH value is '%s'\n" "${ARCH}"
+  exit 1
 fi
